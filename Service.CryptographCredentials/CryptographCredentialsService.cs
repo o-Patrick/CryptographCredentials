@@ -4,6 +4,8 @@ using System.Text;
 using Microsoft.Extensions.Configuration;
 using System.Security.Cryptography;
 using ServiceExternals.Interfaces;
+using CryptographCredentials.Domain.Entities;
+using CryptographCredentials.Domain.Enums;
 
 namespace Service.CryptographCredentials
 {
@@ -14,6 +16,8 @@ namespace Service.CryptographCredentials
         private readonly ILogHandler _logHandler;
         private readonly string _processName;
         private readonly string _fileNameToBeProcessed;
+        private readonly ReplaceFor _replaceForConfig;
+        private readonly EReplaceOptions? _replaceOption;
         #endregion
 
         #region | Constructor |
@@ -23,6 +27,16 @@ namespace Service.CryptographCredentials
             _logHandler = logHandler;
             _processName = nameof(CryptographCredentialsService);
             _fileNameToBeProcessed = _configuration.GetSection("FileNameToBeProcessed").Value ?? "";
+            _replaceForConfig = _configuration.GetSection("ReplaceFor").Get<ReplaceFor>() ?? new ReplaceFor();
+
+            try
+            {
+                _replaceOption = _replaceForConfig.GetActiveOption();
+            }
+            catch (Exception exc)
+            {
+                Console.WriteLine($"Exception: {exc.Message}");
+            }
         }
         #endregion
 
@@ -35,7 +49,7 @@ namespace Service.CryptographCredentials
         public void Execute()
         {
             var _logContent = new StringBuilder();
-
+                    
             Console.WriteLine("Enter the directory path:");
             string directoryPath = Console.ReadLine() ?? "";
 
@@ -81,7 +95,14 @@ namespace Service.CryptographCredentials
                 if (jsonNode != null)
                 {
                     UpdateJsonValues(jsonNode);
-                    File.WriteAllText(path, jsonNode.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+                    
+                    var options = new JsonSerializerOptions
+                    {
+                        WriteIndented = true,
+                        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                    };
+                    
+                    File.WriteAllText(path, jsonNode.ToJsonString(options)); 
                     _logHandler.FileBuilder($"Processed: {path}");
                 }
             }
@@ -120,7 +141,14 @@ namespace Service.CryptographCredentials
                         if (IsSensitiveKey(property.Key))
                         {
                             string originalValue = value.ToString();
-                            jsonObject[property.Key] = ComputeHash(originalValue);
+
+                            jsonObject[property.Key] = _replaceOption switch
+                            {
+                                EReplaceOptions.Secret => (JsonNode)"<SECRET>",
+                                EReplaceOptions.Hash => (JsonNode)ComputeHash(originalValue),
+                                EReplaceOptions.Whitespace => (JsonNode)string.Empty,
+                                _ => throw new Exception("No valid replacement option selected on app configuration."),
+                            };
                         }
                     }
                 }
@@ -132,7 +160,7 @@ namespace Service.CryptographCredentials
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
-        private bool IsSensitiveKey(string key)
+        private static bool IsSensitiveKey(string key)
         {
             return key.Contains("login", StringComparison.OrdinalIgnoreCase)
                 || key.Contains("user", StringComparison.OrdinalIgnoreCase)
@@ -145,7 +173,7 @@ namespace Service.CryptographCredentials
         /// </summary>
         /// <param name="data"></param>
         /// <returns></returns>
-        private string ComputeHash(string data)
+        private static string ComputeHash(string data)
         {
             var stringBuilder = new StringBuilder();
             byte[] hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(data));
