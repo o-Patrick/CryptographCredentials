@@ -37,8 +37,7 @@ namespace Service.CryptographCredentials
             var _logContent = new StringBuilder();
 
             Console.WriteLine("Enter the directory path:");
-            //string directoryPath = Console.ReadLine() ?? "";
-            string directoryPath = "C:\\Users\\tickt\\source\\repos\\datamotion\\LigueMedicina\\LigueMedicina_MiddlewareServices";
+            string directoryPath = Console.ReadLine() ?? "";
 
             if (Directory.Exists(directoryPath))
             {
