@@ -3,9 +3,9 @@ using System.Text.Json;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using System.Security.Cryptography;
-using ServiceExternals.Interfaces;
 using CryptographCredentials.Domain.Entities;
 using CryptographCredentials.Domain.Enums;
+using CryptographCredentials.Framework.LogManagement.Interfaces;
 
 namespace Service.CryptographCredentials
 {
