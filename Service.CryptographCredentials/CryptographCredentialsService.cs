@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Nodes;
+﻿using static CryptographCredentials.Framework.LogManagement.LogHandler;
+using System.Text.Json.Nodes;
 using System.Text.Json;
 using System.Text;
 using Microsoft.Extensions.Configuration;
@@ -48,8 +49,8 @@ namespace Service.CryptographCredentials
         /// </summary>
         public async Task ExecuteAsync()
         {
-            Console.WriteLine("Enter the directory path:");
-            string directoryPath = Console.ReadLine() ?? "";
+            ConsoleWrite("Process started");
+            string? directoryPath = ConsoleRead("Enter the directory path:");
 
             if (Directory.Exists(directoryPath))
             {
@@ -62,6 +63,7 @@ namespace Service.CryptographCredentials
             }
 
             await _logHandler.SaveFileLocallyAsync(_processName);
+            ConsoleWrite("Process finished");
         }
 
         #region | Private methods |

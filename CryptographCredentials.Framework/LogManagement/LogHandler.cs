@@ -18,13 +18,39 @@ namespace CryptographCredentials.Framework.LogManagement
 
         #region | Methods |
         /// <summary>
+        /// Logs messages into the console
+        /// </summary>
+        /// <param name="message"></param>
+        /// <returns></returns>
+        public static void ConsoleWrite(string message)
+        {
+            message = $"{DateTime.Now:dd-MM-yyyy HH:mm:ss.fff} | {message}";
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine(message);
+            Console.ForegroundColor = ConsoleColor.Gray;
+        }
+
+        /// <summary>
+        /// Writes a message and reads another on the console
+        /// </summary>
+        /// <param name="message"></param>
+        /// <returns></returns>
+        public static string? ConsoleRead(string message)
+        {
+            ConsoleWrite(message);
+            return Console.ReadLine();
+        }
+
+        /// <summary>
         /// StringBuilder for logging
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        public StringBuilder FileBuilder(string message)
+        public void FileBuilder(string message)
         {
-            return _fileContent.AppendLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} | {message}");
+            message = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} | {message}";
+            ConsoleWrite(message);
+            _fileContent.AppendLine(message);
         }
 
         /// <summary>
@@ -33,14 +59,26 @@ namespace CryptographCredentials.Framework.LogManagement
         /// <param name="processName"></param>
         /// <param name="fileContent"></param>
         /// <returns></returns>
-        public async Task SaveFileLocallyAsync(string processName)
+        public async Task<bool> SaveFileLocallyAsync(string processName)
         {
-            string fileName = $"{DateTime.Now:yyyMMddTHHmmss}_{processName}";
-            string fileFullPath = Path.Combine(Directory.GetCurrentDirectory(), "Log", fileName);
+            try
+            {
+                string fileName = $"{DateTime.Now:yyyMMddTHHmmss}_{processName}.txt";
+                string fileFullPath = Path.Combine(Directory.GetCurrentDirectory(), "Log", fileName);
 
-            using var streamWriter = new StreamWriter(fileFullPath, true, Encoding.UTF8, _fileContent.Length);
-            await streamWriter.WriteAsync(_fileContent);
-            await streamWriter.FlushAsync();
+                using var streamWriter = new StreamWriter(fileFullPath, true, Encoding.UTF8, _fileContent.Length);
+                await streamWriter.WriteAsync(_fileContent);
+                await streamWriter.FlushAsync();
+
+                ConsoleWrite($"{fileName} saved successfully");
+                return true;
+            }
+            catch (Exception exc)
+            {
+                ConsoleWrite($"Exception {exc}");
+            }
+
+            return false;
         }
         #endregion
     }
