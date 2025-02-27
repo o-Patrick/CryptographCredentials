@@ -1,7 +1,7 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using CryptographCredentials.Framework.LogManagement;
+using CryptographCredentials.Framework.LogManagement.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 using Service.CryptographCredentials;
-using ServiceExternals;
-using ServiceExternals.Interfaces;
 
 namespace CryptographCredentials.IoC
 {
