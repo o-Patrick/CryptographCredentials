@@ -8,7 +8,7 @@ using CryptographCredentials.Domain.Entities;
 using CryptographCredentials.Domain.Enums;
 using CryptographCredentials.Framework.LogManagement.Interfaces;
 
-namespace Service.CryptographCredentials
+namespace CryptographCredentials.Service
 {
     public class CryptographCredentialsService
     {
@@ -74,7 +74,7 @@ namespace Service.CryptographCredentials
         private void ProcessDirectory(string targetDirectory)
         {
             string[] fileEntries = Directory.GetFiles(targetDirectory, _fileNameToBeProcessed, SearchOption.AllDirectories);
-            
+
             foreach (string fileName in fileEntries)
             {
                 ProcessFile(fileName);
@@ -95,14 +95,14 @@ namespace Service.CryptographCredentials
                 if (jsonNode != null)
                 {
                     UpdateJsonValues(jsonNode);
-                    
+
                     var options = new JsonSerializerOptions
                     {
                         WriteIndented = true,
                         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
                     };
-                    
-                    File.WriteAllText(path, jsonNode.ToJsonString(options)); 
+
+                    File.WriteAllText(path, jsonNode.ToJsonString(options));
                     _logHandler.FileBuilder($"Processed: {path}");
                 }
             }

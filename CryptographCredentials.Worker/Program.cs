@@ -1,9 +1,9 @@
 ﻿using CryptographCredentials.IoC;
+using CryptographCredentials.Service;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Service.CryptographCredentials;
 
-namespace CryptographCredentials
+namespace CryptographCredentials.Worker
 {
     internal class Program
     {
