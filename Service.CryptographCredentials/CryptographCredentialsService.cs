@@ -56,14 +56,14 @@ namespace Service.CryptographCredentials
             if (Directory.Exists(directoryPath))
             {
                 ProcessDirectory(directoryPath);
-                _logContent = _logHandler.FileBuilder("Processing completed.");
+                _logHandler.FileBuilder("Processing completed.");
             }
             else
             {
-                _logContent = _logHandler.FileBuilder("Directory not found.");
+                _logHandler.FileBuilder("Directory not found.");
             }
 
-            _logHandler.SaveFileLocallyAsync(_processName, _logContent.ToString());
+            await _logHandler.SaveFileLocallyAsync(_processName);
         }
 
         #region | Private methods |

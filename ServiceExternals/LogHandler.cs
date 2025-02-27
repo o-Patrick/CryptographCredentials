@@ -5,15 +5,14 @@ namespace ServiceExternals
 {
     public class LogHandler : ILogHandler
     {
-
         #region | Fields |
-        private readonly StringBuilder _stringBuilder;
+        private readonly StringBuilder _fileContent;
         #endregion
 
         #region | Constructor |
         public LogHandler()
         {
-            _stringBuilder = new StringBuilder();
+            _fileContent = new StringBuilder();
         }
         #endregion
 
@@ -25,7 +24,7 @@ namespace ServiceExternals
         /// <returns></returns>
         public StringBuilder FileBuilder(string message)
         {
-            return _stringBuilder.AppendLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} | {message}");
+            return _fileContent.AppendLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} | {message}");
         }
 
         /// <summary>
@@ -34,14 +33,13 @@ namespace ServiceExternals
         /// <param name="processName"></param>
         /// <param name="fileContent"></param>
         /// <returns></returns>
-        public async Task SaveFileLocallyAsync(string processName, string fileContent)
+        public async Task SaveFileLocallyAsync(string processName)
         {
             string fileName = $"{DateTime.Now:yyyMMddTHHmmss}_{processName}";
-
             string fileFullPath = Path.Combine(Directory.GetCurrentDirectory(), "Log", fileName);
-
-            using var streamWriter = new StreamWriter(fileFullPath, true, Encoding.UTF8, fileContent.Length);
-            await streamWriter.WriteAsync(fileContent);
+            
+            using var streamWriter = new StreamWriter(fileFullPath, true, Encoding.UTF8, _fileContent.Length);
+            await streamWriter.WriteAsync(_fileContent);
             await streamWriter.FlushAsync();
         }
         #endregion
