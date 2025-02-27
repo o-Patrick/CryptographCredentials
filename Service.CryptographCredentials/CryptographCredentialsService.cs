@@ -160,10 +160,11 @@ namespace Service.CryptographCredentials
         /// <returns></returns>
         private static bool IsSensitiveKey(string key)
         {
-            return key.Contains("login", StringComparison.OrdinalIgnoreCase)
-                || key.Contains("user", StringComparison.OrdinalIgnoreCase)
-                || key.Contains("email", StringComparison.OrdinalIgnoreCase)
-                || key.Contains("password", StringComparison.OrdinalIgnoreCase);
+            var stringComparison = StringComparison.OrdinalIgnoreCase;
+            return key.Contains("login", stringComparison)
+                || key.Contains("user", stringComparison)
+                || key.Contains("email", stringComparison)
+                || key.Contains("password", stringComparison);
         }
 
         /// <summary>
