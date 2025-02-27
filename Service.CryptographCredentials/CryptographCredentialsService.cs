@@ -46,10 +46,8 @@ namespace Service.CryptographCredentials
         /// Gets the main directory to be read
         /// Calls for log file to be saved locally
         /// </summary>
-        public void Execute()
+        public async Task ExecuteAsync()
         {
-            var _logContent = new StringBuilder();
-                    
             Console.WriteLine("Enter the directory path:");
             string directoryPath = Console.ReadLine() ?? "";
 
