@@ -12,7 +12,7 @@ namespace CryptographCredentials.Service
     public class CryptographCredentialsService
     {
         #region | Fields |
-        private readonly ILogHandler _logHandler;
+        private readonly ILogHandler _logger;
         private readonly string _processName;
         private readonly string _fileNameToBeProcessed;
         #endregion
@@ -21,7 +21,7 @@ namespace CryptographCredentials.Service
         public CryptographCredentialsService(IConfiguration configuration,
             ILogHandler logHandler)
         {
-            _logHandler = logHandler;
+            _logger = logHandler;
             _processName = GetType().Name;
             _fileNameToBeProcessed = configuration.GetSection("FileNameToBeProcessed").Value ?? string.Empty;
         }
@@ -35,52 +35,59 @@ namespace CryptographCredentials.Service
         /// </summary>
         public async Task ExecuteAsync()
         {
+            _logger.FileBuilder("Program finished.");
             bool restartProgram;
 
-            do
+            try
             {
-                Console.Clear();
-                bool startProgram = ConsoleRead("Start program? (y/n)").Equals("y", StringComparison.InvariantCultureIgnoreCase);
-
-                if (startProgram)
+                do
                 {
-                    string? directoryPath = ConsoleRead("Enter the directory path:").Replace("\"", string.Empty);
+                    Console.Clear();
+                    bool startProgram = ConsoleRead("Start program? (y/n)").Equals("y", StringComparison.InvariantCultureIgnoreCase);
 
-                    if (Directory.Exists(directoryPath))
+                    if (startProgram)
                     {
-                        _logHandler.FileBuilder("Directory found.");
-                        var cryptographyType = GetCryptographyType(ConsoleRead("Choose the cryptography type:\n[1] Secret\n[2] Hash\n[3]Whitespace"));
-                        
-                        if (cryptographyType != null)
+                        string? directoryPath = ConsoleRead("Enter the directory path:").Trim().Replace("\"", string.Empty).Replace("\'", string.Empty);
+
+                        if (!Directory.Exists(directoryPath))
                         {
-                            ProcessDirectory(directoryPath, (ECryptographyType)cryptographyType);
-                            _logHandler.FileBuilder("Processing completed.");
+                            _logger.FileBuilder($"Directory not found at {directoryPath}.");
                         }
                         else
                         {
-                            _logHandler.FileBuilder("Invalid cryptography type selected. Please restart the program when prompted.");
+                            _logger.FileBuilder("Directory found.");
+                            var cryptographyType = GetCryptographyType(ConsoleRead("Choose the cryptography type:\n[1] Secret\n[2] Hash\n[3]Whitespace"));
+
+                            if (cryptographyType == null)
+                            {
+                                _logger.FileBuilder("Invalid cryptography type selected. Please restart the program when prompted.");
+                            }
+                            else
+                            {
+                                ProcessDirectory(directoryPath, (ECryptographyType)cryptographyType);
+                                _logger.FileBuilder("Processing completed.");
+                            }
                         }
                     }
                     else
                     {
-                        _logHandler.FileBuilder("Directory not found.");
+                        Environment.Exit(0);
                     }
-                
-                    await _logHandler.SaveFileLocallyAsync(_processName);
-                }
-                else
-                {
-                    Environment.Exit(0);
-                }
 
-                restartProgram = ConsoleRead("Restart program? (y/n)").Equals("y", StringComparison.InvariantCultureIgnoreCase);
-            } while (restartProgram);
+                    restartProgram = ConsoleRead("Restart program? (y/n)").Equals("y", StringComparison.InvariantCultureIgnoreCase);
+                } while (restartProgram);
+            }
+            catch (Exception exc)
+            {
+                _logger.FileBuilder($"Exception: {exc}");
+            }
             
-            ConsoleWrite("Program finished");
+            _logger.FileBuilder("Program finished.");
+            await _logger.SaveFileLocallyAsync(_processName);
         }
 
         #region | Private methods |
-        private ECryptographyType? GetCryptographyType(string value)
+        private static ECryptographyType? GetCryptographyType(string value)
         {
             if (Enum.TryParse<ECryptographyType>(value, true, out var result))
             {
@@ -126,12 +133,12 @@ namespace CryptographCredentials.Service
                     };
 
                     File.WriteAllText(path, jsonNode.ToJsonString(options));
-                    _logHandler.FileBuilder($"Processed: {path}");
+                    _logger.FileBuilder($"Processed: {path}");
                 }
             }
             catch (Exception ex)
             {
-                _logHandler.FileBuilder($"Error processing file {path}: {ex.Message}");
+                _logger.FileBuilder($"Error processing file {path}: {ex.Message}");
             }
         }
 
@@ -139,7 +146,7 @@ namespace CryptographCredentials.Service
         /// Processes JSON properties
         /// </summary>
         /// <param name="node"></param>
-        private void UpdateJsonValues(JsonNode node, ECryptographyType cryptographyType)
+        private static void UpdateJsonValues(JsonNode node, ECryptographyType cryptographyType)
         {
             if (node is JsonArray jsonArray)
             {
