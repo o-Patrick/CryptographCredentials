@@ -35,7 +35,7 @@ namespace CryptographCredentials.Framework.LogManagement
         /// </summary>
         /// <param name="prompt"></param>
         /// <returns></returns>
-        public static string ConsoleRead(string? prompt)
+        public static string ConsoleRead(string? prompt = null)
         {
             if (prompt != null)
             {
