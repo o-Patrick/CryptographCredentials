@@ -33,12 +33,16 @@ namespace CryptographCredentials.Framework.LogManagement
         /// <summary>
         /// Writes a message and reads another on the console
         /// </summary>
-        /// <param name="message"></param>
+        /// <param name="prompt"></param>
         /// <returns></returns>
-        public static string? ConsoleRead(string message)
+        public static string ConsoleRead(string? prompt)
         {
-            ConsoleWrite(message);
-            return Console.ReadLine();
+            if (prompt != null)
+            {
+                ConsoleWrite(prompt);
+            }
+            
+            return Console.ReadLine() ?? string.Empty;
         }
 
         /// <summary>
