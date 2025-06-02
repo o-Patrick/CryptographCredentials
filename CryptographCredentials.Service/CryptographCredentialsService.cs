@@ -1,43 +1,29 @@
 ﻿using static CryptographCredentials.Framework.LogManagement.LogHandler;
-using System.Text.Json.Nodes;
-using System.Text.Json;
-using System.Text;
-using Microsoft.Extensions.Configuration;
-using System.Security.Cryptography;
-using CryptographCredentials.Domain.Entities;
 using CryptographCredentials.Domain.Enums;
 using CryptographCredentials.Framework.LogManagement.Interfaces;
+using Microsoft.Extensions.Configuration;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace CryptographCredentials.Service
 {
     public class CryptographCredentialsService
     {
         #region | Fields |
-        private readonly IConfiguration _configuration;
         private readonly ILogHandler _logHandler;
         private readonly string _processName;
         private readonly string _fileNameToBeProcessed;
-        private readonly ReplaceFor _replaceForConfig;
-        private readonly EReplaceOptions? _replaceOption;
         #endregion
 
         #region | Constructor |
-        public CryptographCredentialsService(IConfiguration configuration, ILogHandler logHandler)
+        public CryptographCredentialsService(IConfiguration configuration,
+            ILogHandler logHandler)
         {
-            _configuration = configuration;
             _logHandler = logHandler;
-            _processName = nameof(CryptographCredentialsService);
-            _fileNameToBeProcessed = _configuration.GetSection("FileNameToBeProcessed").Value ?? "";
-            _replaceForConfig = _configuration.GetSection("ReplaceFor").Get<ReplaceFor>() ?? new ReplaceFor();
-
-            try
-            {
-                _replaceOption = _replaceForConfig.GetActiveOption();
-            }
-            catch (Exception exc)
-            {
-                Console.WriteLine($"Exception: {exc.Message}");
-            }
+            _processName = GetType().Name;
+            _fileNameToBeProcessed = configuration.GetSection("FileNameToBeProcessed").Value ?? string.Empty;
         }
         #endregion
 
@@ -49,35 +35,72 @@ namespace CryptographCredentials.Service
         /// </summary>
         public async Task ExecuteAsync()
         {
-            ConsoleWrite("Process started");
-            string? directoryPath = ConsoleRead("Enter the directory path:");
+            bool restartProgram;
 
-            if (Directory.Exists(directoryPath))
+            do
             {
-                ProcessDirectory(directoryPath);
-                _logHandler.FileBuilder("Processing completed.");
-            }
-            else
-            {
-                _logHandler.FileBuilder("Directory not found.");
-            }
+                Console.Clear();
+                bool startProgram = ConsoleRead("Start program? (y/n)").Equals("y", StringComparison.InvariantCultureIgnoreCase);
 
-            await _logHandler.SaveFileLocallyAsync(_processName);
-            ConsoleWrite("Process finished");
+                if (startProgram)
+                {
+                    string? directoryPath = ConsoleRead("Enter the directory path:").Replace("\"", string.Empty);
+
+                    if (Directory.Exists(directoryPath))
+                    {
+                        _logHandler.FileBuilder("Directory found.");
+                        var cryptographyType = GetCryptographyType(ConsoleRead("Choose the cryptography type:\n[1] Secret\n[2] Hash\n[3]Whitespace"));
+                        
+                        if (cryptographyType != null)
+                        {
+                            ProcessDirectory(directoryPath, (ECryptographyType)cryptographyType);
+                            _logHandler.FileBuilder("Processing completed.");
+                        }
+                        else
+                        {
+                            _logHandler.FileBuilder("Invalid cryptography type selected. Please restart the program when prompted.");
+                        }
+                    }
+                    else
+                    {
+                        _logHandler.FileBuilder("Directory not found.");
+                    }
+                
+                    await _logHandler.SaveFileLocallyAsync(_processName);
+                }
+                else
+                {
+                    Environment.Exit(0);
+                }
+
+                restartProgram = ConsoleRead("Restart program? (y/n)").Equals("y", StringComparison.InvariantCultureIgnoreCase);
+            } while (restartProgram);
+            
+            ConsoleWrite("Program finished");
         }
 
         #region | Private methods |
+        private ECryptographyType? GetCryptographyType(string value)
+        {
+            if (Enum.TryParse<ECryptographyType>(value, true, out var result))
+            {
+                return result;
+            }
+
+            return null;
+        }
+
         /// <summary>
         /// Calls only for appsettings.json files to be read
         /// </summary>
         /// <param name="targetDirectory"></param>
-        private void ProcessDirectory(string targetDirectory)
+        private void ProcessDirectory(string targetDirectory, ECryptographyType cryptographyType)
         {
             string[] fileEntries = Directory.GetFiles(targetDirectory, _fileNameToBeProcessed, SearchOption.AllDirectories);
 
             foreach (string fileName in fileEntries)
             {
-                ProcessFile(fileName);
+                ProcessFile(fileName, cryptographyType);
             }
         }
 
@@ -85,7 +108,7 @@ namespace CryptographCredentials.Service
         /// Processes files
         /// </summary>
         /// <param name="path"></param>
-        private void ProcessFile(string path)
+        private void ProcessFile(string path, ECryptographyType cryptographyType)
         {
             try
             {
@@ -94,7 +117,7 @@ namespace CryptographCredentials.Service
 
                 if (jsonNode != null)
                 {
-                    UpdateJsonValues(jsonNode);
+                    UpdateJsonValues(jsonNode, cryptographyType);
 
                     var options = new JsonSerializerOptions
                     {
@@ -116,14 +139,14 @@ namespace CryptographCredentials.Service
         /// Processes JSON properties
         /// </summary>
         /// <param name="node"></param>
-        private void UpdateJsonValues(JsonNode node)
+        private void UpdateJsonValues(JsonNode node, ECryptographyType cryptographyType)
         {
             if (node is JsonArray jsonArray)
             {
                 // Recursively calls this function if value is an array
                 foreach (var item in jsonArray)
                 {
-                    UpdateJsonValues(item!);
+                    UpdateJsonValues(item!, cryptographyType);
                 }
             }
             else if (node is JsonObject jsonObject)
@@ -133,7 +156,7 @@ namespace CryptographCredentials.Service
                     if (property.Value is JsonObject || property.Value is JsonArray)
                     {
                         // Recursively calls this function if value is an object or array
-                        UpdateJsonValues(property.Value!);
+                        UpdateJsonValues(property.Value!, cryptographyType);
                     }
                     else if (property.Value is JsonValue value)
                     {
@@ -142,12 +165,12 @@ namespace CryptographCredentials.Service
                         {
                             string originalValue = value.ToString();
 
-                            jsonObject[property.Key] = _replaceOption switch
+                            jsonObject[property.Key] = cryptographyType switch
                             {
-                                EReplaceOptions.Secret => (JsonNode)"<SECRET>",
-                                EReplaceOptions.Hash => (JsonNode)ComputeHash(originalValue),
-                                EReplaceOptions.Whitespace => (JsonNode)string.Empty,
-                                _ => throw new Exception("No valid replacement option selected on app configuration."),
+                                ECryptographyType.Secret => (JsonNode)"<SECRET>",
+                                ECryptographyType.Hash => (JsonNode)ComputeHash(originalValue),
+                                ECryptographyType.Whitespace => (JsonNode)string.Empty,
+                                _ => throw new Exception("No valid cryptography type selected."),
                             };
                         }
                     }
@@ -163,6 +186,7 @@ namespace CryptographCredentials.Service
         private static bool IsSensitiveKey(string key)
         {
             var stringComparison = StringComparison.OrdinalIgnoreCase;
+            
             return key.Contains("login", stringComparison)
                 || key.Contains("user", stringComparison)
                 || key.Contains("email", stringComparison)
